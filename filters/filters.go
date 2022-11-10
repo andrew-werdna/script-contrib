@@ -44,18 +44,26 @@ func Columns(fn func(rune) bool, newDelim string, cols ...int) ScriptFilterScan 
 			isSafeToUseColumn := v <= maxSafeIndex && v > 0
 			isFinalDesiredColumn := i == finalDesiredColumn
 
-			if isSafeToUseColumn && !isFinalDesiredColumn {
-				b.WriteString(fmt.Sprintf("%s%s", columns[v-1], newDelim))
-				hasWritten = true
-			} else if isSafeToUseColumn && isFinalDesiredColumn {
-				b.WriteString(fmt.Sprintf("%s\n", columns[v-1]))
-				hasWritten = true
-			}
-			if !isSafeToUseColumn && hasWritten {
+			skipColumn := !isSafeToUseColumn && !isFinalDesiredColumn
+			writeLineAndReturn := !isSafeToUseColumn && isFinalDesiredColumn && hasWritten
+			justReturn := !isSafeToUseColumn && isFinalDesiredColumn && !hasWritten
+			writeWithDelim := isSafeToUseColumn && !isFinalDesiredColumn
+			writeWithNewline := isSafeToUseColumn && isFinalDesiredColumn
+
+			if skipColumn {
+				continue
+			} else if justReturn {
+				return
+			} else if writeLineAndReturn {
 				_, _ = fmt.Fprintf(w, "%s\n", strings.TrimRight(b.String(), newDelim))
 				return
+			} else if writeWithDelim {
+				b.WriteString(fmt.Sprintf("%s%s", columns[v-1], newDelim))
+				hasWritten = true
+			} else if writeWithNewline {
+				b.WriteString(fmt.Sprintf("%s\n", columns[v-1]))
 			}
 		}
-		_, _ = fmt.Fprint(w, b.String())
+		_, _ = fmt.Fprint(w, strings.TrimRight(b.String(), newDelim))
 	}
 }

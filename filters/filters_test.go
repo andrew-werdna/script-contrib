@@ -26,10 +26,12 @@ func TestCutFirstN(t *testing.T) {
 }
 
 func TestColumns(t *testing.T) {
-	const test1 string = `1,2,3,4
+	const input1 string = `1,2,3,4
 alpha,bravo,charlie,delta`
-	const test2 string = `1   2   3   4
+	const input2 string = `1   2   3   4
 alpha    bravo    charlie    delta`
+	const input3 string = `1,2,3,4,5,6,7,8,9,10,11,12
+alpha,beta,gamma,delta,epsilon,zeta,eta,theta,iota,kappa,la,mu`
 
 	t.Run("works on CSV data", func(t *testing.T) {
 		want := fmt.Sprintf("2 3\nbravo charlie\n")
@@ -37,7 +39,7 @@ alpha    bravo    charlie    delta`
 			return c == ','
 		}
 		got, err := script.
-			Echo(test1).
+			Echo(input1).
 			FilterScan(Columns(fn, " ", 2, 3)).
 			String()
 		if err != nil {
@@ -55,7 +57,7 @@ alpha    bravo    charlie    delta`
 			return c == ','
 		}
 		got, err := script.
-			Echo(test1).
+			Echo(input1).
 			FilterScan(Columns(fn, " ", 2, 3, 5)).
 			String()
 		if err != nil {
@@ -73,7 +75,7 @@ alpha    bravo    charlie    delta`
 			return c == ','
 		}
 		got, err := script.
-			Echo(test1).
+			Echo(input1).
 			FilterScan(Columns(fn, " ")).
 			String()
 		if err != nil {
@@ -92,7 +94,7 @@ alpha    bravo    charlie    delta`
 			return c == ','
 		}
 		got, err := script.
-			Echo(test1).
+			Echo(input1).
 			FilterScan(Columns(fn, " ", 0)).
 			String()
 		if err != nil {
@@ -111,7 +113,7 @@ alpha    bravo    charlie    delta`
 			return unicode.IsSpace(c)
 		}
 		got, err := script.
-			Echo(test2).
+			Echo(input2).
 			FilterScan(Columns(fn, "\t", 2, 3)).
 			String()
 		if err != nil {
@@ -129,8 +131,44 @@ alpha    bravo    charlie    delta`
 			return unicode.IsSpace(c)
 		}
 		got, err := script.
-			Echo(test2).
+			Echo(input2).
 			FilterScan(Columns(fn, "\t", 2, 3, 6)).
+			String()
+		if err != nil {
+			t.Errorf("expected nil error but got %v", err)
+		}
+
+		if got != want {
+			t.Errorf("wanted '%v', but got '%v'", want, got)
+		}
+	})
+
+	t.Run("allows any order columns", func(t *testing.T) {
+		want := fmt.Sprintf("5|2|8|3|9\nepsilon|beta|theta|gamma|iota\n")
+		fn := func(c rune) bool {
+			return c == ','
+		}
+		got, err := script.
+			Echo(input3).
+			FilterScan(Columns(fn, "|", 5, 2, 8, 3, 9)).
+			String()
+		if err != nil {
+			t.Errorf("expected nil error but got %v", err)
+		}
+
+		if got != want {
+			t.Errorf("wanted '%v', but got '%v'", want, got)
+		}
+	})
+
+	t.Run("allows any order columns and ignores invalid columns", func(t *testing.T) {
+		want := fmt.Sprintf("5|2|8|3|9\nepsilon|beta|theta|gamma|iota\n")
+		fn := func(c rune) bool {
+			return c == ','
+		}
+		got, err := script.
+			Echo(input3).
+			FilterScan(Columns(fn, "|", 5, 2, 17, 8, 3, 9, 21)).
 			String()
 		if err != nil {
 			t.Errorf("expected nil error but got %v", err)
